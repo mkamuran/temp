@@ -99,7 +99,7 @@ Render の Web Service で公開できます。
 
 ```text
 Build Command: pip install -r requirements.txt
-Start Command: gunicorn run:app --bind 0.0.0.0:$PORT
+Start Command: gunicorn run:app --bind 0.0.0.0:$PORT --timeout 180
 ```
 
 このリポジトリには `render.yaml` も入れているため、Render の Blueprint として作成することもできます。
@@ -112,7 +112,7 @@ Start Command: gunicorn run:app --bind 0.0.0.0:$PORT
 4. Branch: `main`
 5. Runtime: `Python`
 6. Build Command: `pip install -r requirements.txt`
-7. Start Command: `gunicorn run:app --bind 0.0.0.0:$PORT`
+7. Start Command: `gunicorn run:app --bind 0.0.0.0:$PORT --timeout 180`
 8. Instance Type: `Free`
 9. `Create Web Service`
 

@@ -259,7 +259,14 @@ async function searchSimilarStocks() {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(payload),
 		});
-		const data = await response.json();
+		const responseText = await response.text();
+		let data;
+
+		try {
+			data = JSON.parse(responseText);
+		} catch {
+			throw new Error("検索APIがJSONではない応答を返しました。RenderでWeb Serviceとして起動できているか確認してください。");
+		}
 
 		if (!response.ok) {
 			throw new Error(data.error || "検索に失敗しました。");

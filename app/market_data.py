@@ -9,6 +9,7 @@ import yfinance as yf
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CACHE_TTL_SECONDS = 30 * 60
+BATCH_SIZE = 40
 
 _history_cache = {}
 
@@ -108,6 +109,24 @@ def _slice_around_base(frame, base_date, trading_days, anchor):
 	return frame.iloc[start_pos:end_pos].copy(), str(base_session.date())
 
 
+def _chunks(values, size):
+	for index in range(0, len(values), size):
+		yield values[index:index + size]
+
+
+def _download_batch(tickers, start_date, end_date):
+	return yf.download(
+		" ".join(tickers),
+		start=start_date.isoformat(),
+		end=end_date.isoformat(),
+		interval="1d",
+		group_by="ticker",
+		auto_adjust=False,
+		progress=False,
+		threads=True,
+	)
+
+
 def fetch_histories(market, period, base_date, anchor):
 	trading_days = PERIOD_TRADING_DAYS[period]
 	cache_key = (market, period, str(base_date), anchor)
@@ -122,49 +141,49 @@ def fetch_histories(market, period, base_date, anchor):
 	tickers = [row["ticker"] for row in symbols]
 	start_date, end_date = _calendar_range(base_date, trading_days, anchor)
 
-	raw = yf.download(
-		" ".join(tickers),
-		start=start_date.isoformat(),
-		end=end_date.isoformat(),
-		interval="1d",
-		group_by="ticker",
-		auto_adjust=False,
-		progress=False,
-		threads=True,
-	)
-
 	rows = []
+	failed_batches = 0
 	meta_by_ticker = {row["ticker"]: row for row in symbols}
 
-	for ticker in tickers:
-		frame = _extract_symbol_frame(raw, ticker)
-		if frame.empty or "Close" not in frame.columns:
+	for batch in _chunks(tickers, BATCH_SIZE):
+		try:
+			raw = _download_batch(batch, start_date, end_date)
+		except Exception:
+			failed_batches += 1
 			continue
 
-		frame = frame[["Close", "Volume"]].dropna(subset=["Close"]).copy()
-		if frame.empty:
-			continue
+		for ticker in batch:
+			frame = _extract_symbol_frame(raw, ticker)
+			if frame.empty or "Close" not in frame.columns:
+				continue
 
-		frame, resolved_base_date = _slice_around_base(frame, base_date, trading_days, anchor)
-		if frame.empty:
-			continue
+			frame = frame[["Close", "Volume"]].dropna(subset=["Close"]).copy()
+			if frame.empty:
+				continue
 
-		close = frame["Close"].astype(float)
-		volume = frame["Volume"].fillna(0).astype(float)
-		meta = meta_by_ticker[ticker]
+			frame, resolved_base_date = _slice_around_base(frame, base_date, trading_days, anchor)
+			if frame.empty:
+				continue
 
-		rows.append({
-			"ticker": ticker,
-			"name": meta.get("name", ticker),
-			"sector": meta.get("sector", ""),
-			"dates": [str(idx.date()) for idx in frame.index],
-			"base_date": resolved_base_date,
-			"close": close.tolist(),
-			"avg_volume": float(volume.mean()),
-			"latest_close": float(close.iloc[-1]),
-			"yahoo_url": yahoo_url(ticker),
-			"minkabu_url": minkabu_url(ticker),
-		})
+			close = frame["Close"].astype(float)
+			volume = frame["Volume"].fillna(0).astype(float)
+			meta = meta_by_ticker[ticker]
+
+			rows.append({
+				"ticker": ticker,
+				"name": meta.get("name", ticker),
+				"sector": meta.get("sector", ""),
+				"dates": [str(idx.date()) for idx in frame.index],
+				"base_date": resolved_base_date,
+				"close": close.tolist(),
+				"avg_volume": float(volume.mean()),
+				"latest_close": float(close.iloc[-1]),
+				"yahoo_url": yahoo_url(ticker),
+				"minkabu_url": minkabu_url(ticker),
+			})
+
+	if not rows and failed_batches:
+		raise RuntimeError("failed to fetch market data")
 
 	_history_cache[cache_key] = (now + CACHE_TTL_SECONDS, rows)
 	return rows

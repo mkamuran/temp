@@ -1,4 +1,5 @@
 from datetime import date, datetime
+import traceback
 
 from flask import Blueprint, jsonify, render_template, request
 
@@ -78,7 +79,14 @@ def search():
 		return jsonify({"error": "出来高フィルターは数値で入力してください。"}), 400
 
 	draw_series = prepare_series(points, TARGET_POINTS)
-	histories = fetch_histories(market, period, base_date, anchor)
+
+	try:
+		histories = fetch_histories(market, period, base_date, anchor)
+	except Exception:
+		traceback.print_exc()
+		return jsonify({
+			"error": "株価データの取得中にエラーが発生しました。時間をおいて再検索してください。",
+		}), 502
 
 	results = []
 	for item in histories:
