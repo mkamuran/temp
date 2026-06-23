@@ -4,7 +4,33 @@
 
 Canvas に描いた線と日経225銘柄の終値チャートを同じ点数にリサンプリングし、正規化したうえで類似度を計算します。複雑な機械学習ではなく、説明しやすい軽量な時系列比較として実装しました。
 
+## Live Demo
+
+https://chart-shape-finder.onrender.com/
+
 ![Chart Shape Finder screenshot](docs/screenshot.png)
+
+## Example Search Result
+
+実際に次の条件で検索した例です。
+
+| Condition | Value |
+| --- | --- |
+| Market | `nikkei225` |
+| Period | `1ヶ月` |
+| Base Date | `2026-06-23` |
+| Anchor | `基準日を右端` |
+| Search Scope | 代表80銘柄 |
+
+Top 5 results:
+
+| Rank | Ticker | Name | Sector | Similarity |
+| --- | --- | --- | --- | --- |
+| 1 | `8750.T` | Dai-ichi Life Holdings | Insurance | 89.5% |
+| 2 | `7186.T` | Yokohama Financial Group | Bank | 88.1% |
+| 3 | `3092.T` | ZOZO | Retail | 87.7% |
+| 4 | `8309.T` | Sumitomo Mitsui Trust Holdings | Bank | 86.9% |
+| 5 | `7735.T` | Screen Holdings | Electrical | 86.6% |
 
 ## What This App Does
 
