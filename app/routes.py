@@ -3,7 +3,7 @@ import traceback
 
 from flask import Blueprint, jsonify, render_template, request
 
-from app.market_data import fetch_histories, load_markets
+from app.market_data import MAX_SYMBOLS, fetch_histories, load_markets
 from app.similarity import TARGET_POINTS, prepare_series, similarity_score
 
 
@@ -37,6 +37,14 @@ def index():
 		default_anchor="right",
 		today=date.today().isoformat(),
 	)
+
+
+@bp.get("/api/health")
+def health():
+	return jsonify({
+		"ok": True,
+		"max_symbols": MAX_SYMBOLS,
+	})
 
 
 @bp.post("/api/search")

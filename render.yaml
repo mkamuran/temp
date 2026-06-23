@@ -7,3 +7,8 @@ services:
     startCommand: gunicorn run:app --bind 0.0.0.0:$PORT --timeout 180
     healthCheckPath: /
     autoDeployTrigger: commit
+    envVars:
+      - key: MAX_SYMBOLS
+        value: 80
+      - key: YFINANCE_BATCH_SIZE
+        value: 80

@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import date, timedelta
 from pathlib import Path
@@ -9,7 +10,8 @@ import yfinance as yf
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CACHE_TTL_SECONDS = 30 * 60
-BATCH_SIZE = 40
+BATCH_SIZE = int(os.environ.get("YFINANCE_BATCH_SIZE", "80"))
+MAX_SYMBOLS = int(os.environ.get("MAX_SYMBOLS", "80"))
 
 _history_cache = {}
 
@@ -114,6 +116,14 @@ def _chunks(values, size):
 		yield values[index:index + size]
 
 
+def _representative_symbols(symbols):
+	if MAX_SYMBOLS <= 0 or len(symbols) <= MAX_SYMBOLS:
+		return symbols
+
+	total = len(symbols)
+	return [symbols[int(index * total / MAX_SYMBOLS)] for index in range(MAX_SYMBOLS)]
+
+
 def _download_batch(tickers, start_date, end_date):
 	return yf.download(
 		" ".join(tickers),
@@ -137,7 +147,7 @@ def fetch_histories(market, period, base_date, anchor):
 		if expires_at > now:
 			return rows
 
-	symbols = get_symbols(market)
+	symbols = _representative_symbols(get_symbols(market))
 	tickers = [row["ticker"] for row in symbols]
 	start_date, end_date = _calendar_range(base_date, trading_days, anchor)
 
